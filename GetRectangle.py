@@ -1,15 +1,3 @@
-
-
-"""
-cv2.Canny(image,            # 输入原图（必须为单通道图）
-          threshold1,
-          threshold2,       # 较大的阈值2用于检测图像中明显的边缘
-          [, edges[,
-          apertureSize[,    # apertureSize：Sobel算子的大小
-          L2gradient ]]])   # 参数(布尔值)：
-                              true： 使用更精确的L2范数进行计算（即两个方向的倒数的平方和再开放），
-                              false：使用L1范数（直接将两个方向导数的绝对值相加）。
-"""
 import cv2
 import numpy as np
 import cmath as math
@@ -313,7 +301,7 @@ def vertical(img):
     for x in range(w):
         b_count = 0
         for y in range(h):
-            if pre2_picture[x, y] == 0: #255 有字
+            if pre2_picture[x, y] == 0: #0黑 有字
                 b_count += 1
                 break
         if b_count>0:
@@ -355,7 +343,14 @@ def vertical(img):
 def CCLCut(img,img_num):        #255白
     ls = []
     gray=img
-    img_shape = img.shape
+    padding_rate=0.1
+    gr_w = gray.shape[0]
+    gr_h = gray.shape[1]
+    gray = cv2.copyMakeBorder(gray, (int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+                                      (int)(gr_h * padding_rate), (int)(gr_h * padding_rate),
+                                      cv2.BORDER_CONSTANT, value=[255, 255, 255])
+    cv2.imshow("ggg",gray)
+    img_shape = gray.shape
     w = img_shape[0]
     h = img_shape[1]
     tag_img = np.ones((w, h)).astype(np.int16)
@@ -366,8 +361,11 @@ def CCLCut(img,img_num):        #255白
     #     for j in range(h):
     #         if img[i][j]==0:
     #             print([i,j])
+
+
+
     for i in range(w):
-        if gray[i][0] == 0:  # 0有字
+        if gray[i][0] == 0:  # 0黑有字
             link_list = LinkList()
             tag_img[i][0] = type_num
             # label_set[i][0]=label_set_count
@@ -411,11 +409,7 @@ def CCLCut(img,img_num):        #255白
                     for c in range(len(type_list)):
                         if c != min_index:
                             # print(type_list[min_index])
-                            if type_list[min_index] != type_list[c] and list_lslink[
-                                type_list[c]] != None:  ##当领域相同时 None一次之后其余变空
-                                # if list_lslink[type_list[c]]==None:
-                                #     print(2222)
-                                #     print(1111)
+                            if type_list[min_index] != type_list[c] and list_lslink[type_list[c]] != None:  ##当领域相同时 None一次之后其余变空
                                 setTreeTagImage(list_lslink[type_list[c]].head, tag_img, type_list[min_index])
                                 list_lslink[type_list[min_index]].appendTree(list_lslink[type_list[c]].head)
                                 list_lslink[type_list[c]] = None
@@ -441,20 +435,39 @@ def CCLCut(img,img_num):        #255白
         count+=1
         left=9999
         right=0
-        bottom=9999
-        top=0
+        top=9999
+        bottom=0
         p = item.head
         while p:
             if p.data[1]<left:
                 left=p.data[1]
             if p.data[1]>right:
                 right=p.data[1]
-            if p.data[0]<bottom:
-                bottom=p.data[0]
-            if p.data[0]>top:
-                top = p.data[0]
+            if p.data[0]<top:
+                top=p.data[0]
+            if p.data[0]>bottom:
+                bottom = p.data[0]
             p=p.next
-        result_pic = img[bottom:top,left:right]
+
+        item_w=bottom-top+1
+        item_h =right-left+1
+        result_pic=np.ones((item_w, item_h,1), np.uint8)
+        result_pic*=255
+        p = item.head
+
+        while p:
+            result_pic[p.data[0]-top,p.data[1]-left]=0
+            p = p.next
+        #result_pic = img[bottom:top,left:right]
+
+        # padding_rate=0.1
+        # gr_w = result_pic.shape[0]
+        # gr_h = result_pic.shape[1]
+        # constant = cv2.copyMakeBorder(result_pic, (int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+        #                               (int)(gr_h * padding_rate), (int)(gr_h * padding_rate),
+        #                               cv2.BORDER_CONSTANT, value=[255, 255, 255])
+        # cv2.imshow("constant", constant)
+
         AdhereCut(result_pic,str(img_num)+"__"+str(count))
         #result_pic=cv2.resize(result_pic, (28, 28), interpolation=cv2.INTER_LINEAR)
        # cv2.imshow("pic", result_pic)
@@ -469,16 +482,29 @@ def CCLCut(img,img_num):        #255白
     #     while p:
     #         pic[p.data[0]][p.data[1]] = (0, 0, 255)
     #         p = p.next
+
+
 def  AdhereCut(img,img_num):
+
+    # padding_rate=0.2
+    # gr_w = img.shape[0]
+    # gr_h = img.shape[1]
+    # constant = cv2.copyMakeBorder(img, (int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+    #                               (int)(gr_h * padding_rate), (int)(gr_h * padding_rate),
+    #                               cv2.BORDER_CONSTANT, value=[255, 255, 255])
+    # cv2.imshow("constant", constant)
+
+
     img_shape = img.shape
     ls = []
     w = img_shape[0]
     h = img_shape[1]
     gray=img
+    cv2.imshow("gray",gray)
+    cv2.waitKey(0)
+
     # 二值化处理
     #_, gray = cv2.threshold(img, 120, 255, cv2.THRESH_BINARY_INV)
-    cv2.imshow("G", gray)
-    cv2.waitKey(0)
     pic = np.zeros((w, h, 3), np.uint8)
     # 画出下轮廓
     for y in range(0, h):
@@ -498,17 +524,25 @@ def  AdhereCut(img,img_num):
         if exist:
             ls.append(lowPoint)
             pic[lowPoint[0], lowPoint[1]] = (0, 0, 255)
+
+
+
+    if len(ls)==0:
+        return
+
+
     cv2.imshow('origi', pic)
+
 
     # 得到下轮廓波峰和波谷
     wave_list = []
     num = 0
     wave_start = ls[0]
-    wave_start_h = ls[0][0]
+    wave_start_h = ls[0][0]    #//x 坐标值
     wave_top_h = wave_start_h
-    wave_top = []
+    wave_top = []   #top坐标值
     wave_end_h = 0
-    wave_end = []
+    wave_end = []   #end坐标值
     top_find = 0
     for i in range(0, len(ls)):
         if top_find == 1:
@@ -527,17 +561,26 @@ def  AdhereCut(img,img_num):
             if i == len(ls) - 1:
                 num += 1
                 wave_list.append(Wave(wave_start, wave_top, wave_end))
-
         else:
             if ls[i][0] >= wave_top_h:
                 wave_top = ls[i]
                 wave_top_h = ls[i][0]
+                if i == len(ls) - 1:
+                    num += 1
+                    wave_list.append(Wave(wave_start, wave_top, wave_top))  #一条直线时
             else:
                 top_find = 1
                 wave_end_h = ls[i][0]
                 wave_end = ls[i]
+                if i == len(ls) - 1:
+                    num += 1
+                    wave_list.append(Wave(wave_start, wave_top, wave_end))
     avg_h = 0
     avg_w = 0
+
+    if num==0:
+        return;
+
     for i in wave_list:
         avg_h += i.WaveH()
         avg_w += i.WaveW()
@@ -583,7 +626,7 @@ def  AdhereCut(img,img_num):
                         mergeType = MergeType.right
             else:
                 mergeType = MergeType.right
-        elif abs(merge_wave.WaveH() - wave_list[count].WaveH()) > 0.75 * max(merge_wave.WaveH(),
+        elif abs(merge_wave.WaveH() - wave_list[count].WaveH()) > 0.80 * max(merge_wave.WaveH(),
                                                                              wave_list[count].WaveH()):
             mergeType = MergeType.right
 
@@ -615,13 +658,43 @@ def  AdhereCut(img,img_num):
 
 #合并后的波如果只有1 直接存退出
     if len(wave_list_result)<=1:
-        #result_pic=cv2.resize(gray, (28, 28), interpolation=cv2.INTER_LINEAR)
-        cv2.imwrite("E:/" + img_num + ".png", gray)
+
+        padding_rate=0.2
+        # gr_w = img.shape[0]
+        # gr_h = img.shape[1]
+        # constant = cv2.copyMakeBorder(img, (int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+        #                               (int)(gr_h * padding_rate), (int)(gr_h * padding_rate),
+        #                               cv2.BORDER_CONSTANT, value=[255, 255, 255])
+        #
+        # cv2.imshow("constant", constant)
+
+        gr_w=gray.shape[0]
+        gr_h=gray.shape[1]
+        constant=[]
+        if gr_w>gr_h:
+            diff_value = (gr_w-gr_h)*(1+padding_rate*2)
+            constant = cv2.copyMakeBorder(gray,(int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+                                          (int)(diff_value/2+gr_h * padding_rate), int(diff_value/2+gr_h * padding_rate), cv2.BORDER_CONSTANT,
+                                          value=[255, 255, 255])
+        else :
+            diff_value = (gr_h - gr_w)*(1+padding_rate*2)
+            constant = cv2.copyMakeBorder(gray,  (int)(diff_value/2+gr_w * padding_rate), int(diff_value/2+gr_w * padding_rate),
+                                          (int)(gr_h * padding_rate), (int)(gr_h * padding_rate),cv2.BORDER_CONSTANT,
+                                          value=[255, 255, 255])
+        print(constant.shape)
+        cv2.imshow("cons",constant)
+        result_pic = cv2.resize(constant, (28, 28), interpolation=cv2.INTER_LINEAR)
+        imgFix = np.zeros((28, 28, 1), np.uint8)
+        for i in range(28):
+            for j in range(28):
+                imgFix[i, j] = 255 - result_pic[i, j]
+       # result_pic_gray = cv2.cvtColor(result_pic, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite("E:/" + img_num + ".png", imgFix)
         return
     count = 0
     cut_posi = []
-    cut_left = 0
-    cut_right = 0
+    cut_left = wave_list_result[0].wave_start[1]
+    cut_right = wave_list_result[0].wave_start[1]
     while count < len(wave_list_result) - 1:
         cut_left = cut_right
         l_wave = wave_list_result[count]
@@ -637,14 +710,14 @@ def  AdhereCut(img,img_num):
                         start_posi = [start_posi[0], y + 1]
                         break
                 else:
-                    if (gray[start_posi[0]][y]) == 255:  # 255 黑色
+                    if (gray[start_posi[0]][y]) == 255:
                         find_black = 1
                         start_posi = [start_posi[0], y]
         else:
             start_posi = l_wave.wave_top
             y = start_posi[1]
             while y <= h:
-                if (gray[start_posi[0]][y]) == 0:  # 255
+                if (gray[start_posi[0]][y]) == 0:  # 0
                     start_posi = [start_posi[0], y]
                     break;
                 y += 1
@@ -654,7 +727,7 @@ def  AdhereCut(img,img_num):
         print("start_y" + str(start_y))
         print("refer_Y" + str(refer_Y))
         while start_x > 0 and start_y > 0 and start_y < h:
-            if start_y == refer_Y: break
+
             if start_y < refer_Y:  # 右优先
                 if gray[start_x - 1][start_y + 1] == 255:  # 255 右上
                     start_x = start_x - 1
@@ -670,7 +743,7 @@ def  AdhereCut(img,img_num):
                     start_y = start_y + 1
                 else:
                     start_x = start_x - 1
-            else:  # 左优先
+            elif  start_y> refer_Y:  # 左优先
                 if gray[start_x - 1][start_y - 1] == 255:  # 255 左上
                     start_x = start_x - 1
                     start_y = start_y - 1
@@ -688,20 +761,148 @@ def  AdhereCut(img,img_num):
                     start_y = start_y - 1
                 else:
                     start_x = start_x - 1
+            if start_y == refer_Y: break
         end_posi = [start_x, start_y]
         cut_right = start_y
         print("end_posi" + str(end_posi))
         cut = gray[0:w, cut_left:cut_right]
-        #result_pic = cv2.resize(cut, (28, 28), interpolation=cv2.INTER_LINEAR)
-        # cv2.imshow("pic", result_pic)
-        cv2.imwrite("E:/" +img_num+"__"+str(count) +".png", cut)
+        gr_w = cut.shape[0]
+        gr_h = cut.shape[1]
+
+        cv2.imshow("cut", cut)
+        cv2.waitKey(0)
+
+        top_posi=0
+        bottom_posi = w
+        find=0
+        for i in range(gr_w):
+            for j in range(gr_h):
+                if cut[i][j]==0:
+                    top_posi=i
+                    find=1
+                    break
+            if find:
+                break
+        find=0
+        for i in reversed(range(gr_w)):
+            for j in range(gr_h):
+                if cut[i][j] == 0:
+                    bottom_posi = i
+                    find = 1
+                    break
+            if find:
+                break
+        print("top ,bottom")
+        print(top_posi,bottom_posi)
+        cut = cut[top_posi:bottom_posi, 0: gr_h]
+
+        cv2.imshow("cut",cut)
+        cv2.waitKey(0)
+        constant = []
+        padding_rate = 0.2
+        gr_w = cut.shape[0]
+        gr_h = cut.shape[1]
+        constant = []
+        if gr_w > gr_h:
+            diff_value = (gr_w - gr_h) * (1 + padding_rate * 2)
+            constant = cv2.copyMakeBorder(cut, (int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+                                          (int)(diff_value / 2 + gr_h * padding_rate),
+                                          int(diff_value / 2 + gr_h * padding_rate), cv2.BORDER_CONSTANT,
+                                          value=[255, 255, 255])
+        else:
+            diff_value = (gr_h - gr_w) * (1 + padding_rate * 2)
+            constant = cv2.copyMakeBorder(cut, (int)(diff_value / 2 + gr_w * padding_rate),
+                                          int(diff_value / 2 + gr_w * padding_rate),
+                                          (int)(gr_h * padding_rate), (int)(gr_h * padding_rate), cv2.BORDER_CONSTANT,
+                                          value=[255, 255, 255])
+
+
+
+        # gr_w = cut.shape[0]
+        # gr_h = cut.shape[1]
+        # if gr_w > gr_h:
+        #     diff_value = gr_w - gr_h
+        #     constant = cv2.copyMakeBorder(cut, 0, 0,
+        #                                   (int)(diff_value / 2), int(diff_value / 2), cv2.BORDER_CONSTANT,
+        #                                   value=[255, 255, 255])
+        # else:
+        #     diff_value = gr_h - gr_w
+        #     constant = cv2.copyMakeBorder(cut, (int)(diff_value/2), int(diff_value/2),
+        #                                   0, 0, cv2.BORDER_CONSTANT,
+        #                                   value=[255, 255, 255])
+        print(constant.shape)
+        result_pic = cv2.resize(constant, (28, 28), interpolation=cv2.INTER_LINEAR)
+        imgFix = np.zeros((28,28, 1), np.uint8)
+        for i in range(28):
+            for j in range(28):
+                imgFix[i, j] = 255 - result_pic[i, j]
+        cv2.imwrite("E:/" +img_num+"__"+str(count) +".png", imgFix)
         # for i in range(w):
         #     gray[i][start_y] = 0 //分界线上色
         count += 1
-    cut = gray[0:w, cut_right:h]
-    #result_pic = cv2.resize(cut, (28, 28), interpolation=cv2.INTER_LINEAR)
+    cut = gray[0:w, cut_right:wave_list_result[count].wave_end[1]]
+    gr_w = cut.shape[0]
+    gr_h = cut.shape[1]
+    top_posi = 0
+    bottom_posi = w
+    find = 0
+    for i in range(gr_w):
+        for j in range(gr_h):
+            if cut[i][j] == 0:
+                top_posi = i
+                find = 1
+                break
+        if find:
+            break
+    find = 0
+    for i in reversed(range(gr_w)):
+        for j in range(gr_h):
+            if cut[i][j] == 0:
+                bottom_posi = i
+                find = 1
+                break
+        if find:
+            break
+
+    cut = cut[top_posi:bottom_posi, 0: gr_h]
+
+    constant = []
+    padding_rate=0.2
+    gr_w = cut.shape[0]
+    gr_h = cut.shape[1]
+    constant = []
+    if gr_w > gr_h:
+        diff_value = (gr_w - gr_h) * (1 + padding_rate * 2)
+        constant = cv2.copyMakeBorder(cut, (int)(gr_w * padding_rate), (int)(gr_w * padding_rate),
+                                      (int)(diff_value / 2 + gr_h * padding_rate),
+                                      int(diff_value / 2 + gr_h * padding_rate), cv2.BORDER_CONSTANT,
+                                      value=[255, 255, 255])
+    else:
+        diff_value = (gr_h - gr_w) * (1 + padding_rate * 2)
+        constant = cv2.copyMakeBorder(cut, (int)(diff_value / 2 + gr_w * padding_rate),
+                                      int(diff_value / 2 + gr_w * padding_rate),
+                                      (int)(gr_h * padding_rate), (int)(gr_h * padding_rate), cv2.BORDER_CONSTANT,
+                                      value=[255, 255, 255])
+
+    # if gr_w > gr_h:
+    #     diff_value = gr_w - gr_h
+    #     constant = cv2.copyMakeBorder(cut, 0, 0,
+    #                                   (int)(diff_value / 2), int(diff_value / 2), cv2.BORDER_CONSTANT,
+    #                                   value=[255, 255, 255])
+    # else:
+    #     diff_value = gr_h - gr_w
+    #     constant = cv2.copyMakeBorder(cut, (int)(diff_value/2), int(diff_value/2),
+    #                                   0, 0, cv2.BORDER_CONSTANT,
+    #                                   value=[255, 255, 255])
+    print(constant.shape)
+    result_pic = cv2.resize(constant, (28, 28), interpolation=cv2.INTER_LINEAR)
+    imgFix = np.zeros((28, 28, 1), np.uint8)
+    for i in range(28):
+        for j in range(28):
+            imgFix[i, j] = 255 - result_pic[i, j]
+    #result_pic_gray = cv2.cvtColor(result_pic, cv2.COLOR_BGR2GRAY)
     # cv2.imshow("pic", result_pic)
-    cv2.imwrite("E:/" + img_num+"__"+str(count) + ".png", cut)
+    cv2.imwrite("E:/" + img_num+"__"+str(count) + ".png", imgFix)
     cv2.imshow('cut', gray)
 
 
@@ -753,17 +954,45 @@ gray=cv2.cvtColor(original_img,cv2.COLOR_BGR2GRAY)
 #返回值： threshold,img
 
 #retval,
-im_fixed=cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C ,cv2.THRESH_BINARY,15,15)
+im_fixed=cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C ,cv2.THRESH_BINARY,27,27)
+
+cv2.imshow("im_fixed", im_fixed)
+
+#kernel = cv2.getStructuringElement(cv2.MARKER_CROSS,(2,2))
+
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(2,2))
+
 #
-
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
-
 erosion = cv2.erode(im_fixed,kernel,iterations = 1)
+#dilation=cv2.dilate(erosion,kernel,iterations = 1)
+
+
+cv2.imshow("erosion", erosion)
+
+
+# Blur = cv2.GaussianBlur(erosion, (3, 3), 0,0)
+#
+# cv2.imshow("GaussianBlur",Blur)
+#
+#
+# blur = cv2.medianBlur(erosion,5)
+# cv2.imshow("medianBlur",blur)
+#
+# MeansDeno=cv2.fastNlMeansDenoising(erosion,None, 60, 7, 21)
+# cv2.imshow("MeansDeno",MeansDeno)
+
+
+cv2.waitKey(0)
+
+
+
+
+
 
 vertical(erosion)
 #CCLCut(erosion)
 
-cv2.imshow("gray", erosion)
+
 
 
 
